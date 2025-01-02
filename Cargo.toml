@@ -1,5 +1,6 @@
 [package]
 name = "fuzzy-datetime"
+description = "Detects, completes and normalises fuzzy date and date-time strings for interoperability with chrono or direct output as ISO-8601-compatible strings"
 repository = "https://github.com/neilg63/fuzzy-datetime"
 version = "0.1.0"
 edition = "2021"
