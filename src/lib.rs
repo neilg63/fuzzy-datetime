@@ -13,7 +13,6 @@ use guess::surmise_date_order_and_splitter;
 use validators::segment_is_subseconds;
 use converters::{fuzzy_to_formatted_time_parts, to_formatted_date_string};
 
-
 /// If the second argument is None, the function will attempt to guess the date order
 /// Otherwise, it will use the provided date order and splitter
 pub fn fuzzy_to_datetime(dt: &str, date_opts: Option<DateOptions>, time_separator: Option<char>) -> Result<NaiveDateTime, ParseError> {
@@ -23,7 +22,7 @@ pub fn fuzzy_to_datetime(dt: &str, date_opts: Option<DateOptions>, time_separato
 
 /// convert a date-time-like string to a valid ISO 8601-compatible date-time string
 /// for direct output or further processing via chrono
-/// Assume all input dates conforms to the ISO 8601 order, even if incompmlete. All guessing is short-circuited
+/// Assume all input dates conforms to the ISO 8601 order, even if incomplete. All guessing is short-circuited
 /// This is compatible with original function in julian_day_converter
 pub fn iso_fuzzy_string_to_datetime(dt: &str) -> Result<NaiveDateTime, ParseError> {
   fuzzy_to_datetime(dt, Some(DateOptions::default()), Some(':'))
@@ -43,8 +42,8 @@ pub fn iso_fuzzy_to_date(dt: &str) -> Result<NaiveDate, ParseError> {
 }
 
 /// convert a date-time-like string to a valid ISO 8601-compatible date string
-/// for driect output or further processing via chrono
-/// If date_opts is None, the function will attempt to guess the date order
+/// for direct output or further processing via chrono
+/// If date_opts is None, the function will attempt to guess the date order with bias towards YMD and DMY in case of ambiguity
 /// For best performance, provide the date order and splitter
 pub fn fuzzy_to_date_string(dt: &str, date_opts: Option<DateOptions>) -> Option<String> {
   if let Some((date_str, _t_str, _ms_tz)) = fuzzy_to_date_string_with_time(dt, date_opts) {

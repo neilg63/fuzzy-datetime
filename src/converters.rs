@@ -35,7 +35,7 @@ pub(crate) fn to_formatted_date_string(date_srr: &str,date_order: DateOrder, spl
     Some(format!("{:04}-{:02}-{:02}", yr, month, day))
   }
 
-
+/// extract the time and millseconds components of a date-time string
 pub(crate) fn fuzzy_to_formatted_time_parts(time_part: &str, ms_tz: &str, time_separator: Option<char>, add_z: bool) -> Option<(String, String)> {
   let t_splitter = time_separator.unwrap_or(guess_time_splitter(&time_part));
   let t_parts: Vec<&str> = time_part.split(t_splitter).collect();
