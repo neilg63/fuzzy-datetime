@@ -54,6 +54,17 @@ pub fn fuzzy_to_date_string(dt: &str, date_opts: Option<DateOptions>) -> Option<
   None
 }
 
+/// convert a date-like assuming the source string follows the Y-M-D pattern
+pub fn iso_fuzzy_to_date_string(dt: &str) -> Option<String> {
+	fuzzy_to_date_string(dt, Some(DateOptions::default()))
+}
+
+/// convert a date-time-like assuming the source string follows the Y-M-D H:m:s pattern
+pub fn iso_fuzzy_to_datetime_string(dt: &str) -> Option<String> {
+	fuzzy_to_datetime_string_opts(dt, 'T', Some(DateOptions::default()), Some(':'), true)
+}
+
+
 /// convert a date-time-like string to a valid ISO 8601-compatible string
 pub fn fuzzy_to_date_string_with_time(dt: &str, date_opts: Option<DateOptions>) -> Option<(String, String, String)> {
 	
