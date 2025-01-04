@@ -13,7 +13,6 @@ pub fn detect_date_format_from_list(date_list: &[&str]) -> DateOptions {
       F: Fn(&T) -> Option<String>,
   {
     let mut order = DateOrder::YMD;
-    let mut splitter = '-';
   
     for row in date_list {
       if let Some(dt_str) = extract_date(row) {
@@ -25,23 +24,20 @@ pub fn detect_date_format_from_list(date_list: &[&str]) -> DateOptions {
         match guess {
             DateOrderGuess::YearFirst => {
                 order = DateOrder::YMD;
-                splitter = split_char;
-                return DateOptions(order, splitter);
+                return DateOptions(order, split_char);
             },
             DateOrderGuess::DayFirst => {
                 order = DateOrder::DMY;
-                splitter = split_char;
-                return DateOptions(order, splitter);
+                return DateOptions(order, split_char);
             },
             DateOrderGuess::MonthFirst => {
                 order = DateOrder::MDY;
-                splitter = split_char;
-                return DateOptions(order, splitter);
+                return DateOptions(order, split_char);
             },
             _ => continue, // NonDate or ambiguous format, keep looking
         }
       }
     }
     // If we didn't find a conclusive format, we might want to handle this case better
-    DateOptions(order, splitter)
+    DateOptions(order, None)
   }

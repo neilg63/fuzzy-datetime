@@ -1,5 +1,5 @@
-use simple_string_patterns::CharGroupMatch;
-use crate::date_order::{DateOptions, DateOrder};
+use simple_string_patterns::{CharGroupMatch, StripCharacters, ToSegments};
+use crate::{converters::digits_to_date_parts, date_order::{DateOptions, DateOrder}};
 
 
 /// Probable date-time format when comparing many sample date strings
@@ -31,7 +31,7 @@ pub fn surmise_date_order_and_splitter(date_str: &str) -> DateOptions {
     DateOptions(surmise_date_order(date_str, splitter), splitter)
   }
   
-  pub fn surmise_date_order(date_str: &str, splitter: char) -> DateOrder {
+  pub fn surmise_date_order(date_str: &str, splitter: Option<char>) -> DateOrder {
     guess_date_order(date_str, splitter).to_order()
   }
   
@@ -39,9 +39,31 @@ pub fn surmise_date_order_and_splitter(date_str: &str) -> DateOptions {
   /// assuming YMD, DMY or MDY as the likely order
   /// but catering for ambiguous cases or invalid dates
   /// Date strings with fewer than 3 parts must include the year
-  pub fn guess_date_order(date_str: &str, splitter: char) -> DateOrderGuess {
-    let str_parts = date_str.split(splitter).collect::<Vec<&str>>();
-    let date_parts: Vec<&str> = str_parts.into_iter().filter(|n| n.is_digits_only()).collect();
+  pub fn guess_date_order(date_str: &str, splitter: Option< char>) -> DateOrderGuess {
+    let str_parts = if let Some(split_char) = splitter {
+      date_str.to_parts(&split_char.to_string())
+    } else {
+      let parts = digits_to_date_parts(date_str, DateOrder::DMY);
+      if parts.len() < 3 {
+        return DateOrderGuess::NonDate;
+      }
+      let first = parts[0].parse::<u16>().unwrap_or(0);
+      let second = parts[1].parse::<u16>().unwrap_or(0);
+      let third = parts[2].parse::<u16>().unwrap_or(0);
+      let first_4 = vec![parts[0].as_str(), parts[1].as_str()].join("").parse::<u16>().unwrap_or(0);
+      if first < 12 && first > 0 && second > 0 && third >= 1800 {
+        return if second > 12 {
+          DateOrderGuess::MonthFirst
+        } else {
+          DateOrderGuess::DayOrMonthFirst
+        };
+      } else if second < 12 && second > 0 && first > 0 && first < 32 && third > 1800 {
+        return DateOrderGuess::DayFirst;
+      } else {
+        return DateOrderGuess::YearFirst;
+      }
+    };
+    let date_parts: Vec<String> = str_parts.into_iter().filter(|n| n.is_digits_only()).collect();
     let num_parts = date_parts.len();
     let first_len = if num_parts > 0 {
       date_parts[0].len()
@@ -85,13 +107,33 @@ pub fn surmise_date_order_and_splitter(date_str: &str) -> DateOptions {
     }
   }
 
-  pub(crate) fn guess_date_splitter(date_str: &str) -> char {
-    guess_unit_splitter(date_str, &['.', '·', '-', '/']).unwrap_or('-')
+  pub(crate) fn guess_date_splitter(date_str: &str) -> Option<char> {
+    if let Some(splitter) = guess_unit_splitter(date_str, &['-', '/', '.']) {
+      Some(splitter)
+    } else {
+      if date_str.contains("T") {
+        Some('T')
+      } else {
+        if date_str.strip_non_digits().len() >= 8 {
+          None
+        } else {
+          Some(':')
+        }
+      }
+    }
   }
   
-  pub(crate) fn guess_time_splitter(time_str: &str) -> char {  
+  pub(crate) fn guess_time_splitter(time_str: &str) -> Option<char> {  
     // If no valid separator found, default to '-'
-    guess_unit_splitter(time_str, &[':', '.']).unwrap_or(':')
+    if let Some(splitter) = guess_unit_splitter(time_str, &[':', '.']) {
+      Some(splitter)
+    } else {
+      if time_str.strip_non_digits().len() >= 4 {
+        None
+      } else {
+        Some(':')
+      }
+    }
   }
   
   pub(crate) fn guess_unit_splitter(unit_str: &str, separators: &[char]) -> Option<char> {

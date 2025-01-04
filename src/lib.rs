@@ -186,20 +186,20 @@ mod tests {
     #[test]
     fn test_surmise_date_order() {
       let sample_date_1 = "1876-08-29";      
-      assert_eq!(surmise_date_order(sample_date_1, '-'), DateOrder::YMD);
+      assert_eq!(surmise_date_order(sample_date_1, Some('-')), DateOrder::YMD);
 
       let sample_date_2 = "28/02/1998";
-      assert_eq!(surmise_date_order(sample_date_2, '/'), DateOrder::DMY);
+      assert_eq!(surmise_date_order(sample_date_2, Some('/')), DateOrder::DMY);
 
       let sample_date_3 = "02/28/1998";
-      assert_eq!(surmise_date_order(sample_date_3, '/'), DateOrder::MDY);
+      assert_eq!(surmise_date_order(sample_date_3, Some('/')), DateOrder::MDY);
 
       // Ambiguous year-last dates will default to DMY (sorry Americans)
       // However, this can be overridden by specifying the date order
       // order parsing a set of dates to see if any have numbers greater than 12 in the second position
       // and no numbers over 12 in the first position
       let sample_date_4 = "08/07/1998";
-      assert_eq!(surmise_date_order(sample_date_4, '/'), DateOrder::DMY);
+      assert_eq!(surmise_date_order(sample_date_4, Some('/')), DateOrder::DMY);
     }
 
     #[test]
@@ -207,12 +207,19 @@ mod tests {
       let sample_date_1 = "1876-08-29";
       let date_opts_1 = surmise_date_order_and_splitter(sample_date_1);
       assert_eq!(date_opts_1.order(), DateOrder::YMD);
-      assert_eq!(date_opts_1.splitter(), '-');
+      assert_eq!(date_opts_1.splitter(), Some('-'));
 
       let sample_date_2 = "28/02/1998";
       let date_opts_2 = surmise_date_order_and_splitter(sample_date_2);
       assert_eq!(date_opts_2.order(), DateOrder::DMY);
-      assert_eq!(date_opts_2.splitter(), '/');
+      assert_eq!(date_opts_2.splitter(), Some('/'));
+
+      let sample_date_3 = "28021998";
+      let date_opts_3 = surmise_date_order_and_splitter(sample_date_3);
+      assert_eq!(date_opts_3.order(), DateOrder::DMY);
+      assert_eq!(date_opts_3.splitter(), None);
+
+
     }
 
     #[test]
@@ -239,7 +246,7 @@ mod tests {
 
       let date_opts_usa = detect_date_format_from_list(&sample_dates_usa);
       assert_eq!(date_opts_usa.order(), DateOrder::MDY);
-      assert_eq!(date_opts_usa.splitter(), '/');
+      assert_eq!(date_opts_usa.splitter(), Some('/'));
 
       // Many other countries use DMY with slashes
       let sample_dates_dmy = vec![
@@ -251,7 +258,7 @@ mod tests {
 
       let date_opts_dmy = detect_date_format_from_list(&sample_dates_dmy);
       assert_eq!(date_opts_dmy.order(), DateOrder::DMY);
-      assert_eq!(date_opts_dmy.splitter(), '/');
+      assert_eq!(date_opts_dmy.splitter(), Some('/'));
 
 
       // Dates in Germany and many other European countries are DMY with full stops
@@ -263,7 +270,7 @@ mod tests {
       ];
       let date_opts_de = detect_date_format_from_list(&sample_dates_de);
       assert_eq!(date_opts_de.order(), DateOrder::DMY);
-      assert_eq!(date_opts_de.splitter(), '.');
+      assert_eq!(date_opts_de.splitter(), Some('.'));
 
       // French dates are also DMY, but often with hyphens
       let sample_dates_fr = vec![
@@ -274,7 +281,7 @@ mod tests {
       ];
       let date_opts_fr = detect_date_format_from_list(&sample_dates_fr);
       assert_eq!(date_opts_fr.order(), DateOrder::DMY);
-      assert_eq!(date_opts_fr.splitter(), '-');
+      assert_eq!(date_opts_fr.splitter(), Some('-'));
 
       let sample_dates_iso = vec![
         "1998-07-08",
@@ -284,7 +291,7 @@ mod tests {
       ];
       let date_opts_iso = detect_date_format_from_list(&sample_dates_iso);
       assert_eq!(date_opts_iso.order(), DateOrder::YMD);
-      assert_eq!(date_opts_iso.splitter(), '-');
+      assert_eq!(date_opts_iso.splitter(), Some('-'));
 
 
       struct SpecialDay {
