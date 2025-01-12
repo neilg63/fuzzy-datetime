@@ -2,11 +2,11 @@
 name = "fuzzy-datetime"
 description = "Detects, completes and normalises fuzzy date and date-time strings for interoperability with chrono or direct output as ISO-8601-compatible strings"
 repository = "https://github.com/neilg63/fuzzy-datetime"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 categories = ["data-structures", "parsing", "text-processing"]
 license = "GPL-2.0-or-later WITH Bison-exception-2.2"
 
 [dependencies]
-chrono = "^0.4.39"
+chrono = "^0.4.31"
 simple-string-patterns = "^0.3.16"

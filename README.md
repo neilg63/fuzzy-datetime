@@ -9,11 +9,20 @@ This library crate provides functions to detect, normalize, and complete date an
 
 In all cases, dates must come first and may be separated from the optional time component by a space or the letter 'T'.
 
+## Installation
+
+Add this to your `Cargo.toml`:
+
+```toml
+[dependencies]
+fuzzy-datetime = "0.1.0"
+```
+
 ## Core Functions
 
 ### `fuzzy_to_datetime(dt: &str, date_opts: Option<DateOptions>, time_separator: Option<char>) -> Result<NaiveDateTime, ParseError>`
 
-This is the most versatile function. If the last two arguments are `None`, the function will attempt to guess the format, which might lead to ambiguity between `m/d/Y` and `d/m/Y`. For processing large arrays of date-like strings, it's recommended to use format detection functions first.
+This is the most versatile function. If the last two arguments are None, the function will attempt to guess the format, which might lead to ambiguity between `m/d/Y` and `d/m/Y`. For processing large arrays of date-like strings, it's recommended to use format detection functions first.
 
 ```rust
 let date_opts = DateOptions::dmy('/');
@@ -80,4 +89,15 @@ let rows: Vec<SpecialDay> = vec![
 
 let date_opts_special = detect_date_format_from_generic_list(&rows, |x| Some(x.date.clone()));
 assert_eq!(date_opts_special.order(), DateOrder::MDY);
+```
+
+### Simple ISO date-time to naive dateTime conversion
+```rust
+
+let datetime_str = "1876-9-25 15:45"; // incomplete without zero-padding
+
+if let Some(dt) = NaiveDateTime::from_fuzzy_iso_string(datetime_str) {
+    println!("ISO datetime: {}", dt.to_string());
+    // should print "1876-09-25 15:45:00"
+}
 ```

@@ -1,6 +1,4 @@
-use core::num;
 use std::vec;
-
 use simple_string_patterns::{CharGroupMatch, StripCharacters, ToSegments};
 use crate::{guess::guess_time_splitter, DateOrder};
 

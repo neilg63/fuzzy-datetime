@@ -1,3 +1,5 @@
+use std::u16;
+
 use simple_string_patterns::{CharGroupMatch, StripCharacters, ToSegments};
 use crate::{converters::digits_to_date_parts, date_order::{DateOptions, DateOrder}};
 
@@ -43,22 +45,32 @@ pub fn surmise_date_order_and_splitter(date_str: &str) -> DateOptions {
     let str_parts = if let Some(split_char) = splitter {
       date_str.to_parts(&split_char.to_string())
     } else {
-      let parts = digits_to_date_parts(date_str, DateOrder::DMY);
-      if parts.len() < 3 {
+      let ymd_parts = digits_to_date_parts(date_str, DateOrder::YMD);
+      if ymd_parts.len() < 3 {
         return DateOrderGuess::NonDate;
       }
-      let first = parts[0].parse::<u16>().unwrap_or(0);
-      let second = parts[1].parse::<u16>().unwrap_or(0);
-      let third = parts[2].parse::<u16>().unwrap_or(0);
-      let first_4 = vec![parts[0].as_str(), parts[1].as_str()].join("").parse::<u16>().unwrap_or(0);
-      if first < 12 && first > 0 && second > 0 && third >= 1800 {
-        return if second > 12 {
-          DateOrderGuess::MonthFirst
+      let yr_ymd = str_to_u16(&ymd_parts[0]);
+      if yr_ymd >= 1800 && yr_ymd <= 2200 && ymd_parts[0].len() == 4 {
+        let mid_ymd = str_to_u16(&ymd_parts[1]);
+        let end_ymd = str_to_u16(&ymd_parts[2]);
+        if mid_ymd <= 12 && end_ymd <= 31 {
+          return DateOrderGuess::YearFirst;
+        }
+      }
+      let dmy_parts = digits_to_date_parts(date_str, DateOrder::DMY);
+      let yr_dmy = str_to_u16(&dmy_parts[0]);
+      let mid_dmy = str_to_u16(&dmy_parts[1]);
+      let start_dmy = str_to_u16(&dmy_parts[2]);
+      if yr_dmy >= 1800 && yr_dmy <= 2200 {
+        if mid_dmy <= 31 && start_dmy <= 12 {
+          if mid_dmy > 12 {
+            return DateOrderGuess::MonthFirst;
+          } else {
+            return DateOrderGuess::DayOrMonthFirst;
+          }
         } else {
-          DateOrderGuess::DayOrMonthFirst
-        };
-      } else if second < 12 && second > 0 && first > 0 && first < 32 && third > 1800 {
-        return DateOrderGuess::DayFirst;
+          return DateOrderGuess::DayFirst;
+        }
       } else {
         return DateOrderGuess::YearFirst;
       }
@@ -147,4 +159,9 @@ pub fn surmise_date_order_and_splitter(date_str: &str) -> DateOptions {
       index += 1;
     }
     None
+  }
+
+
+  fn str_to_u16(s: &str) -> u16 {
+    s.parse::<u16>().unwrap_or(0)
   }
