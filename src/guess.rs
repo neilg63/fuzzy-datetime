@@ -1,8 +1,6 @@
-use std::u16;
-
-use simple_string_patterns::{CharGroupMatch, StripCharacters, ToSegments};
+use simple_string_patterns::{CharGroupMatch, StripCharacters};
 use crate::{converters::digits_to_date_parts, date_order::{DateOptions, DateOrder}};
-
+use to_segments::ToSegments;
 
 /// Probable date-time format when comparing many sample date strings
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -18,7 +16,7 @@ impl DateOrderGuess {
   
   // default to to one of the known date orders
   // YMD takes precedence over DMY unless the guessed order is DayFirst or DayOrMonthFirst
-  pub fn to_order(&self) -> DateOrder{
+  pub fn to_order(self) -> DateOrder{
     match self {
       Self::YearFirst | Self::NonDate => DateOrder::YMD,
       Self::MonthFirst => DateOrder::MDY,
@@ -41,7 +39,7 @@ pub fn surmise_date_order_and_splitter(date_str: &str) -> DateOptions {
   /// assuming YMD, DMY or MDY as the likely order
   /// but catering for ambiguous cases or invalid dates
   /// Date strings with fewer than 3 parts must include the year
-  pub fn guess_date_order(date_str: &str, splitter: Option< char>) -> DateOrderGuess {
+  pub fn guess_date_order(date_str: &str, splitter: Option<char>) -> DateOrderGuess {
     let str_parts = if let Some(split_char) = splitter {
       date_str.to_parts(&split_char.to_string())
     } else {
@@ -50,7 +48,7 @@ pub fn surmise_date_order_and_splitter(date_str: &str) -> DateOptions {
         return DateOrderGuess::NonDate;
       }
       let yr_ymd = str_to_u16(&ymd_parts[0]);
-      if yr_ymd >= 1800 && yr_ymd <= 2200 && ymd_parts[0].len() == 4 {
+      if (1800..=2200).contains(&yr_ymd) && ymd_parts[0].len() == 4 {
         let mid_ymd = str_to_u16(&ymd_parts[1]);
         let end_ymd = str_to_u16(&ymd_parts[2]);
         if mid_ymd <= 12 && end_ymd <= 31 {
@@ -61,7 +59,7 @@ pub fn surmise_date_order_and_splitter(date_str: &str) -> DateOptions {
       let yr_dmy = str_to_u16(&dmy_parts[0]);
       let mid_dmy = str_to_u16(&dmy_parts[1]);
       let start_dmy = str_to_u16(&dmy_parts[2]);
-      if yr_dmy >= 1800 && yr_dmy <= 2200 {
+      if (1800..=2200).contains(&yr_dmy) {
         if mid_dmy <= 31 && start_dmy <= 12 {
           if mid_dmy > 12 {
             return DateOrderGuess::MonthFirst;
@@ -90,30 +88,30 @@ pub fn surmise_date_order_and_splitter(date_str: &str) -> DateOptions {
     }
     // If the length of the first segment is 4, it's likely a year
     if num_parts < 2 || first_len == 4 {
-      return DateOrderGuess::YearFirst;
+      DateOrderGuess::YearFirst
     } else {
       let first_num = date_parts[0].parse::<u16>().unwrap_or(0);
       if num_parts==2 {
         if first_num < 13 {
-          return DateOrderGuess::DayFirst;
+          DateOrderGuess::DayFirst
         } else {
-          return DateOrderGuess::YearFirst;
+          DateOrderGuess::YearFirst
         }
       } else {
         let second_num = date_parts[1].parse::<u16>().unwrap_or(0);
         let third_num = date_parts[2].parse::<u16>().unwrap_or(0);
         if first_num > 31 {
-          return DateOrderGuess::YearFirst;
+          DateOrderGuess::YearFirst
         } else if first_num < 13 {
           if second_num > 12 && third_num > 31 {
-            return DateOrderGuess::MonthFirst;
+            DateOrderGuess::MonthFirst
           } else {
-            return DateOrderGuess::DayOrMonthFirst;
+            DateOrderGuess::DayOrMonthFirst
           }
         } else if first_num > 12 && third_num > 31 {
-          return DateOrderGuess::DayFirst;
+          DateOrderGuess::DayFirst
         } else {
-          return DateOrderGuess::YearFirst;
+          DateOrderGuess::YearFirst
         }
       }
     }
@@ -151,12 +149,10 @@ pub fn surmise_date_order_and_splitter(date_str: &str) -> DateOptions {
   pub(crate) fn guess_unit_splitter(unit_str: &str, separators: &[char]) -> Option<char> {
     let trimmed = unit_str.trim();
     let num_chars = trimmed.chars().count();
-    let mut index = 0;
-    for c in trimmed.chars() {
+    for (index, c) in trimmed.chars().enumerate() {
       if index > 0 && index < num_chars - 1 && separators.contains(&c) {
         return Some(c);
       }
-      index += 1;
     }
     None
   }

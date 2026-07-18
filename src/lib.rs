@@ -1,5 +1,6 @@
 use chrono::{NaiveDate, NaiveDateTime, ParseError};
-use simple_string_patterns::{CharGroupMatch, CharType, SimplContainsType, ToSegments};
+use simple_string_patterns::{CharGroupMatch, CharType, SimplContainsType};
+use to_segments::ToSegments;
 
 mod date_order;
 mod guess;
@@ -70,18 +71,22 @@ pub fn iso_fuzzy_to_datetime_string(dt: &str) -> Option<String> {
 /// convert a date-time-like string to a valid ISO 8601-compatible string
 pub fn fuzzy_to_date_string_with_time(dt: &str, date_opts: Option<DateOptions>) -> Option<(String, String, String)> {
 	
-  let (dt_str, mtz) = dt.to_start_end(".");
-  let has_mtz = segment_is_subseconds(&mtz);
+  let (dt_opt, mtz_opt) = dt.to_start_end(".");
+  let has_mtz = if let Some(mtz) = mtz_opt {
+    segment_is_subseconds(mtz)
+  } else {
+    false
+  };
   let milli_tz = if has_mtz {
-    mtz
+    mtz_opt.unwrap_or_default()
   } else {
-    "".to_string()
-  };
+    ""
+  }.to_string();
   let dt_base = if has_mtz {
-    dt_str
+    dt_opt.unwrap_or_default()
   } else {
-    dt.to_string()
-  };
+    dt
+  }.to_string();
 	let clean_dt = dt_base.replace("T", " ").trim().to_string();
 	let mut dt_parts = clean_dt.split_whitespace();
 	let date_part = dt_parts.next().unwrap_or("0000-01-01");
@@ -95,11 +100,7 @@ pub fn fuzzy_to_date_string_with_time(dt: &str, date_opts: Option<DateOptions>) 
 			return None;
 	}
 
-	if let Some(formatted_date) = to_formatted_date_string(date_part, date_options.order(), date_options.splitter()) {
-    Some((formatted_date, time_part.to_string(), milli_tz))
-  } else {
-    None
-  }
+	to_formatted_date_string(date_part, date_options.order(), date_options.splitter()).map(|formatted_date| (formatted_date, time_part.to_string(), milli_tz))
 }
 
 
@@ -240,10 +241,10 @@ mod tests {
     
       let sample_1 = "2023-08-29T19.34.39.678Z";
       let (dt_base, milli_tz) = sample_1.to_start_end(".");
-      assert_eq!(dt_base, "2023-08-29T19.34.39");
-      assert_eq!(milli_tz, "678Z");
+      assert_eq!(dt_base.unwrap(), "2023-08-29T19.34.39");
+      assert_eq!(milli_tz.unwrap_or_default(), "678Z");
 
-      assert_eq!(segment_is_subseconds("678Z"), true);
+      assert!(segment_is_subseconds("678Z"));
   }
 
   #[test]

@@ -30,10 +30,6 @@ pub trait FromFuzzyISOString {
 impl FromFuzzyISOString for NaiveDateTime {
   /// construct a DateTime object from an exact or approximate ISO-8601-compatible string
   fn from_fuzzy_iso_string(dt_str: &str) -> Option<Self> {
-    if let Ok(dt) = iso_fuzzy_string_to_datetime(dt_str) {
-      Some(dt)
-    } else {
-      None
-    }
+    iso_fuzzy_string_to_datetime(dt_str).ok()
   }
 }
