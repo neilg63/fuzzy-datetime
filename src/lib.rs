@@ -119,7 +119,14 @@ pub fn fuzzy_to_datetime_string_opts(dt: &str, separator: char, date_opts: Optio
     if !time_part.is_empty() && !time_part.has_digits() {
       return None;
     }
-    let (formatted_time, tz_suffix) = fuzzy_to_formatted_time_parts(&time_part, &ms_tz, time_separator, add_z).unwrap_or_default();
+    // fuzzy_to_formatted_time_parts failing here means a genuine, non-empty time chunk
+    // was present but couldn't be parsed (e.g. "11.39" with a separator time_separator
+    // doesn't recognise) -- time_part is *always* pre-filled to "00:00:00" upstream when
+    // no time was present at all, so that always parses fine and never reaches this. The
+    // previous `.unwrap_or_default()` here silently discarded a real parse failure and
+    // produced a malformed, dangling result like "2026-07-19T" (date, separator, nothing)
+    // instead of correctly failing the whole (date+time) parse.
+    let (formatted_time, tz_suffix) = fuzzy_to_formatted_time_parts(&time_part, &ms_tz, time_separator, add_z)?;
     let formatted_str = format!("{}{}{}{}", formatted_date, separator, formatted_time, tz_suffix);
     if !formatted_str.is_empty() {
       return Some(formatted_str);
@@ -173,6 +180,46 @@ mod tests {
       assert_eq!(
           fuzzy_to_datetime_string(sample_3, None, None),
           Some(sample_3.to_string())
+      );
+  }
+
+  #[test]
+  fn test_dot_separated_dates_are_recognised_under_guessing() {
+      // Regression: segment_is_subseconds misread a bare 4-digit year (e.g. "2026" from
+      // "19.07.2026") as milliseconds-plus-timezone-suffix, since it only checked that
+      // the trailing character was *alphanumeric* -- true for a digit too -- rather than
+      // genuinely non-numeric (like the "Z" in "678Z"). to_start_end(".") then silently
+      // chopped the year off as a fake millisecond/timezone segment, leaving only
+      // "19.07" for order-guessing, which has no year at all and always failed.
+      for (value, expected) in [
+          ("19.07.2026", "2026-07-19"), // DMY (day 19 rules out MDY)
+          ("07.19.2026", "2026-07-19"), // MDY (day 19 rules out DMY)
+          ("2026.07.19", "2026-07-19"), // YMD
+      ] {
+          assert_eq!(
+              fuzzy_to_date_string(value, None),
+              Some(expected.to_string()),
+              "{:?} should resolve to {:?}",
+              value,
+              expected
+          );
+      }
+  }
+
+  #[test]
+  fn test_a_genuinely_unparseable_time_component_fails_the_whole_datetime_rather_than_producing_a_dangling_result() {
+      // Regression: fuzzy_to_datetime_string_opts used `.unwrap_or_default()` on a
+      // failed time-part parse, silently discarding the failure and producing a
+      // malformed, dangling result like "2026-07-19T" (date, separator, nothing) instead
+      // of correctly failing the whole date+time parse. "11.39" as a time chunk (dot
+      // separator, not colon) can't be parsed as a time at all here.
+      assert_eq!(fuzzy_to_datetime_string_opts("2026-07-19 11.39", 'T', None, Some(':'), true), None);
+      // the date-only equivalent is unaffected -- no time component is even attempted
+      assert_eq!(fuzzy_to_date_string("2026-07-19", None), Some("2026-07-19".to_string()));
+      // a genuine, valid time component still works fine
+      assert_eq!(
+          fuzzy_to_datetime_string_opts("2026-07-19 11:39:05", 'T', None, Some(':'), true),
+          Some("2026-07-19T11:39:05.000Z".to_string())
       );
   }
 
